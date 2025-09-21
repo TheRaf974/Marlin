@@ -74,6 +74,7 @@ namespace ExtUI {
   #if ENABLED(MPC_AUTOTUNE)
     enum mpcresult_t : uint8_t { MPC_STARTED, MPC_TEMP_ERROR, MPC_INTERRUPTED, MPC_DONE };
   #endif
+  struct probe_limits_t { float xmin, ymin, xmax, ymax; };
 
   constexpr uint8_t extruderCount = EXTRUDERS;
   constexpr uint8_t hotendCount   = HOTENDS;
@@ -171,10 +172,10 @@ namespace ExtUI {
   bool isHeaterIdle(const extruder_t);
   celsius_float_t getActualTemp_celsius(const heater_t);
   celsius_float_t getActualTemp_celsius(const extruder_t);
-  celsius_float_t getTargetTemp_celsius(const heater_t);
-  celsius_float_t getTargetTemp_celsius(const extruder_t);
-  float getActualFan_percent(const fan_t);
-  float getTargetFan_percent(const fan_t);
+  celsius_t getTargetTemp_celsius(const heater_t);
+  celsius_t getTargetTemp_celsius(const extruder_t);
+  uint8_t getActualFan_percent(const fan_t);
+  uint8_t getTargetFan_percent(const fan_t);
 
   // High level positions, by Axis ID, Extruder ID
   float getAxisPosition_mm(const axis_t);
@@ -212,6 +213,9 @@ namespace ExtUI {
     uint16_t getMaterial_preset_E(const uint16_t);
     #if HAS_HEATED_BED
       uint16_t getMaterial_preset_B(const uint16_t);
+    #endif
+    #if HAS_HEATED_CHAMBER
+      uint16_t getMaterial_preset_C(const uint16_t);
     #endif
   #endif
 
@@ -327,6 +331,13 @@ namespace ExtUI {
     void setLinearAdvance_mm_mm_s(const_float_t, const extruder_t);
   #endif
 
+  #if HAS_SHAPING
+    float getShapingZeta(const axis_t);
+    void setShapingZeta(const float, const axis_t);
+    float getShapingFrequency(const axis_t);
+    void setShapingFrequency(const float, const axis_t);
+  #endif
+
   // JD or Jerk Control
   #if HAS_JUNCTION_DEVIATION
     float getJunctionDeviation_mm();
@@ -367,6 +378,7 @@ namespace ExtUI {
   #if HAS_BED_PROBE
     float getProbeOffset_mm(const axis_t);
     void setProbeOffset_mm(const_float_t, const axis_t);
+    probe_limits_t getBedProbeLimits();
   #endif
 
   // Backlash Control
@@ -418,7 +430,7 @@ namespace ExtUI {
     float getPID_Kp(const extruder_t);
     float getPID_Ki(const extruder_t);
     float getPID_Kd(const extruder_t);
-    void setPID(const_float_t, const_float_t , const_float_t , extruder_t);
+    void setPID(const_float_t, const_float_t, const_float_t, extruder_t);
     void startPIDTune(const celsius_t, extruder_t);
   #endif
 
@@ -427,7 +439,7 @@ namespace ExtUI {
     float getBedPID_Kp();
     float getBedPID_Ki();
     float getBedPID_Kd();
-    void setBedPID(const_float_t, const_float_t , const_float_t);
+    void setBedPID(const_float_t, const_float_t, const_float_t);
     void startBedPIDTune(const celsius_t);
   #endif
 
@@ -452,10 +464,14 @@ namespace ExtUI {
    * Use these to operate on files
    */
   bool isMediaMounted();
+  bool isMediaMountedSD();
+  bool isMediaMountedUSB();
+
   bool isPrintingFromMediaPaused();
   bool isPrintingFromMedia();
   bool isPrinting();
   bool isPrintingPaused();
+  bool isOngoingPrintJob();
 
   void printFile(const char *filename);
   void stopPrint();
@@ -520,8 +536,9 @@ namespace ExtUI {
     void onPauseMode(const PauseMessage message, const PauseMode mode=PAUSE_MODE_SAME, const uint8_t extruder=active_extruder);
   #endif
 
+  void onStatusChanged_P(PGM_P const msg);
+  inline void onStatusChanged(FSTR_P const fstr) { onStatusChanged_P(FTOP(fstr)); }
   void onStatusChanged(const char * const msg);
-  void onStatusChanged(FSTR_P const fstr);
 
   void onHomingStart();
   void onHomingDone();
